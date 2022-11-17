@@ -28,24 +28,52 @@ class User {
         ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
       RETURNING (username, password, first_name, last_name, phone) `,
       [username, hashedPassword, first_name, last_name, phone]);
-      console.log(result.rows)
+
       return result.rows
   }
 
   /** Authenticate: is username/password valid? Returns boolean. */
 
   static async authenticate(username, password) {
+    const result = await db.query(`
+      SELECT password
+      FROM users
+      WHERE username = $1`,
+      [username]);
+    const user = result.rows[0];
+
+    if(user){
+      if(await bcrypt.compare(password, user.password)===true){
+        return true;
+      }
+    }else return false;
   }
 
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
+    const result = await db.query(`
+      UPDATE users
+      SET last_login_at = current_timestamp
+      WHERE username = $1
+      RETURNING username`,
+      [username]);
+      let user = result.rows[0]
+    if (!user) throw new NotFoundError(`No such user: ${username}`);
+
   }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name}, ...] */
 
   static async all() {
+    const result = await db.query(`
+    SELECT username,
+           first_name,
+           last_name
+    FROM users
+    ORDER BY username`);
+    return result.rows
   }
 
   /** Get: get user by username
@@ -58,6 +86,20 @@ class User {
    *          last_login_at } */
 
   static async get(username) {
+    const result = await db.query(`
+      SELECT username,
+              first_name,
+              last_name,
+              phone,
+              join_at,
+              last_login_at
+      FROM users
+      WHERE username = $1`,
+      [username]);
+    let user =  result.rows[0];
+    if (!user) throw new NotFoundError(`No such user: ${username}`);
+    return user;
+
   }
 
   /** Return messages from this user.
