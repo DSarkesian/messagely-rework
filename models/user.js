@@ -41,11 +41,7 @@ class User {
       [username]);
     const user = result.rows[0];
 
-    if(user){
-      if(await bcrypt.compare(password, user.password)===true){
-        return true;
-      }
-    }else return false;
+    return user && await bcrypt.compare(password, user.password) === true;
   }
 
   /** Update last_login_at for user */
